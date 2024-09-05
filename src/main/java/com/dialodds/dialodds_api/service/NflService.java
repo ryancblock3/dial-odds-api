@@ -7,6 +7,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.sql.Timestamp;
 
 @Service
 public class NflService {
@@ -32,7 +35,7 @@ public class NflService {
                      "JOIN odds o ON g.id = o.game_id " +
                      "WHERE g.sport_id = (SELECT id FROM sports WHERE key = 'americanfootball_nfl') " +
                      "AND g.nfl_week = ? " +
-                     "AND g.commence_time > NOW() " +
+                     "AND g.commence_time > NOW() - INTERVAL '5 hours' " +  // Adjust for EST
                      "ORDER BY g.commence_time";
         return jdbcTemplate.queryForList(sql, week);
     }
@@ -46,7 +49,7 @@ public class NflService {
                      "JOIN odds o ON g.id = o.game_id " +
                      "WHERE g.sport_id = (SELECT id FROM sports WHERE key = 'americanfootball_nfl') " +
                      "AND (REPLACE(g.home_team, ' ', '') = ? OR REPLACE(g.away_team, ' ', '') = ?) " +
-                     "AND g.commence_time > NOW() " +
+                     "AND g.commence_time > NOW() - INTERVAL '5 hours' " + // Adjust for EST
                      "ORDER BY g.commence_time";
         return jdbcTemplate.queryForList(sql, formattedTeam, formattedTeam);
     }
@@ -79,13 +82,14 @@ public class NflService {
     }
 
     public List<Map<String, Object>> getGamesWithPendingResults() {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         String sql = "SELECT g.id, g.home_team, g.away_team, g.commence_time, g.nfl_week " +
                      "FROM games g " +
                      "WHERE g.sport_id = (SELECT id FROM sports WHERE key = 'americanfootball_nfl') " +
                      "AND g.result IS NULL " +
-                     "AND g.commence_time < NOW() " +
+                     "AND g.commence_time < ? " +
                      "ORDER BY g.commence_time";
-        return jdbcTemplate.queryForList(sql);
+        return jdbcTemplate.queryForList(sql, Timestamp.from(now.toInstant()));
     }
 
 }
