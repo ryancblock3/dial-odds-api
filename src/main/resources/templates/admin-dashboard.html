@@ -15,10 +15,32 @@
 
         <div x-show="errorMessage" x-text="errorMessage" class="bg-red-600 text-white p-4 rounded mb-4"></div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Seasons Management -->
-            <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
-                <h2 class="text-2xl font-semibold mb-4">Seasons</h2>
+        <!-- Tabs -->
+        <div class="mb-4">
+            <nav class="flex space-x-4">
+                <button @click="activeTab = 'seasons'"
+                    :class="{'bg-blue-600': activeTab === 'seasons', 'bg-gray-700': activeTab !== 'seasons'}"
+                    class="px-4 py-2 rounded-t-lg">Seasons</button>
+                <button @click="activeTab = 'users'"
+                    :class="{'bg-blue-600': activeTab === 'users', 'bg-gray-700': activeTab !== 'users'}"
+                    class="px-4 py-2 rounded-t-lg">Users</button>
+                <button @click="activeTab = 'games'"
+                    :class="{'bg-blue-600': activeTab === 'games', 'bg-gray-700': activeTab !== 'games'}"
+                    class="px-4 py-2 rounded-t-lg">Games</button>
+                <button @click="activeTab = 'bets'"
+                    :class="{'bg-blue-600': activeTab === 'bets', 'bg-gray-700': activeTab !== 'bets'}"
+                    class="px-4 py-2 rounded-t-lg">Bets</button>
+                <button @click="activeTab = 'database'"
+                    :class="{'bg-blue-600': activeTab === 'database', 'bg-gray-700': activeTab !== 'database'}"
+                    class="px-4 py-2 rounded-t-lg">Database</button>
+            </nav>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+            <!-- Seasons Tab -->
+            <div x-show="activeTab === 'seasons'">
+                <h2 class="text-2xl font-semibold mb-4">Seasons Management</h2>
                 <button @click="loadSeasons()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mb-4">
                     Load Seasons
                 </button>
@@ -64,9 +86,9 @@
                 </form>
             </div>
 
-            <!-- User Management -->
-            <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
-                <h2 class="text-2xl font-semibold mb-4">Users</h2>
+            <!-- Users Tab -->
+            <div x-show="activeTab === 'users'">
+                <h2 class="text-2xl font-semibold mb-4">User Management</h2>
                 <select x-model="selectedSeason" @change="loadUsers()"
                     class="bg-gray-700 text-white p-2 rounded w-full mb-4">
                     <option value="">Select a Season</option>
@@ -96,9 +118,9 @@
                 </div>
             </div>
 
-            <!-- Games Management -->
-            <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
-                <h2 class="text-2xl font-semibold mb-4">Games</h2>
+            <!-- Games Tab -->
+            <div x-show="activeTab === 'games'">
+                <h2 class="text-2xl font-semibold mb-4">Games Management</h2>
                 <button @click="loadPendingGames()"
                     class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mb-4">
                     Load Pending Games
@@ -141,34 +163,56 @@
                 </div>
             </div>
 
-            <!-- Bets Management -->
-            <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
-                <h2 class="text-2xl font-semibold mb-4">Bets</h2>
-                <input type="number" x-model="selectedGameId" placeholder="Enter Game ID"
-                    class="bg-gray-700 text-white p-2 rounded w-full mb-2">
-                <button @click="loadUnsettledBets()"
-                    class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full mb-4">
-                    Load Unsettled Bets
+            <!-- Bets Tab -->
+            <div x-show="activeTab === 'bets'">
+                <h2 class="text-2xl font-semibold mb-4">Bets Management</h2>
+                <select x-model="selectedSeasonForBets" @change="loadBetsForSeason()"
+                    class="bg-gray-700 text-white p-2 rounded w-full mb-4">
+                    <option value="">Select a Season</option>
+                    <template x-for="season in seasons" :key="season.id">
+                        <option :value="season.id" x-text="`Season ${season.id}`"></option>
+                    </template>
+                </select>
+
+                <!-- Add the Audit and Correct All Bets button here -->
+                <button @click="auditAndCorrectAllBets"
+                    class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 mb-4">
+                    Audit and Correct All Bets
                 </button>
-                <div x-show="unsettledBets.length > 0" class="overflow-x-auto">
+
+                <div x-show="bets.length > 0" class="overflow-x-auto">
                     <table class="min-w-full bg-gray-700">
                         <thead>
                             <tr>
                                 <th class="px-4 py-2 text-left">ID</th>
                                 <th class="px-4 py-2 text-left">User</th>
-                                <th class="px-4 py-2 text-left">Season</th>
-                                <th class="px-4 py-2 text-left">Bet Type</th>
+                                <th class="px-4 py-2 text-left">Game</th>
+                                <th class="px-4 py-2 text-left">Bet On Team</th>
                                 <th class="px-4 py-2 text-left">Amount</th>
+                                <th class="px-4 py-2 text-left">Result</th>
+                                <th class="px-4 py-2 text-left">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <template x-for="bet in unsettledBets" :key="bet.id">
+                            <template x-for="bet in bets" :key="bet.id">
                                 <tr class="border-t border-gray-600">
                                     <td class="px-4 py-2" x-text="bet.id"></td>
                                     <td class="px-4 py-2" x-text="bet.username"></td>
-                                    <td class="px-4 py-2" x-text="bet.season_id"></td>
-                                    <td class="px-4 py-2" x-text="bet.bet_type"></td>
+                                    <td class="px-4 py-2" x-text="`${bet.home_team} vs ${bet.away_team}`"></td>
+                                    <td class="px-4 py-2" x-text="bet.bet_on_team"></td>
                                     <td class="px-4 py-2" x-text="bet.amount"></td>
+                                    <td class="px-4 py-2" x-text="bet.result || 'Pending'"></td>
+                                    <td class="px-4 py-2">
+                                        <select x-model="bet.newResult" class="bg-gray-600 text-white p-1 rounded">
+                                            <option value="">Select result</option>
+                                            <option value="won">Won</option>
+                                            <option value="lost">Lost</option>
+                                        </select>
+                                        <button @click="correctBetResult(bet.id, bet.newResult)"
+                                            class="bg-yellow-600 text-white px-2 py-1 rounded hover:bg-yellow-700 ml-2">
+                                            Correct
+                                        </button>
+                                    </td>
                                 </tr>
                             </template>
                         </tbody>
@@ -176,8 +220,8 @@
                 </div>
             </div>
 
-            <!-- Database Update -->
-            <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+            <!-- Database Tab -->
+            <div x-show="activeTab === 'database'">
                 <h2 class="text-2xl font-semibold mb-4">Database Update</h2>
                 <button @click="updateDatabase()"
                     class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full">
@@ -193,12 +237,13 @@
     <script>
         function dashboardData() {
             return {
+                activeTab: 'seasons',
                 seasons: [],
                 users: [],
                 pendingGames: [],
-                unsettledBets: [],
+                bets: [],
                 selectedSeason: '',
-                selectedGameId: '',
+                selectedSeasonForBets: '',
                 updateResult: '',
                 errorMessage: '',
                 newSeason: {
@@ -251,7 +296,7 @@
                         });
                         console.log('Season created successfully');
                         await this.loadSeasons();
-                        this.newSeason = { startWeek: 0, endWeek: 0, initialCoins: 0 };
+                        this.newSeason = { startWeek: '', endWeek: '', initialCoins: '' };
                     } catch (error) {
                         console.error('Error creating season:', error);
                     }
@@ -292,17 +337,27 @@
 
                 async updateGameResult(gameId, winner) {
                     console.log('Updating game result:', gameId, winner);
+                    if (!winner) {
+                        this.errorMessage = "Please select a winner before updating the game result.";
+                        return;
+                    }
                     try {
-                        await this.fetchWithErrorHandling(`/api/nfl/games/${gameId}/result`, {
+                        const response = await this.fetchWithErrorHandling(`/api/nfl/games/${gameId}/result`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                             body: `winner=${winner}`
                         });
                         console.log('Game result updated successfully');
+                        this.errorMessage = "Game result updated successfully and bets settled.";
                         await this.loadPendingGames();
                     } catch (error) {
                         console.error('Error updating game result:', error);
+                        this.errorMessage = `Error updating game result: ${error.message}`;
                     }
+                },
+
+                formatDate(dateString) {
+                    return new Date(dateString).toLocaleString();
                 },
 
                 async loadUnsettledBets() {
@@ -314,6 +369,55 @@
                         } catch (error) {
                             console.error('Error loading unsettled bets:', error);
                         }
+                    }
+                },
+
+                async loadBetsForSeason() {
+                    if (this.selectedSeasonForBets) {
+                        console.log('Loading bets for season:', this.selectedSeasonForBets);
+                        try {
+                            this.bets = await this.fetchWithErrorHandling(`/api/bets/seasons/${this.selectedSeasonForBets}`);
+                            console.log('Bets loaded:', this.bets);
+                        } catch (error) {
+                            console.error('Error loading bets:', error);
+                            this.errorMessage = `Error loading bets: ${error.message}`;
+                        }
+                    }
+                },
+
+                async correctBetResult(betId, newResult) {
+                    console.log('Correcting bet result:', betId, newResult);
+                    if (!newResult) {
+                        this.errorMessage = "Please select a new result before correcting the bet.";
+                        return;
+                    }
+                    try {
+                        const response = await this.fetchWithErrorHandling('/api/bets/correct-bet', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: `betId=${betId}&newResult=${newResult}`
+                        });
+                        console.log('Bet corrected successfully');
+                        this.errorMessage = "Bet corrected successfully. Refreshing bets list.";
+                        await this.loadBetsForSeason();
+                    } catch (error) {
+                        console.error('Error correcting bet:', error);
+                        this.errorMessage = `Error correcting bet: ${error.message}`;
+                    }
+                },
+
+                async auditAndCorrectAllBets() {
+                    console.log('Auditing and correcting all bets...');
+                    try {
+                        const response = await this.fetchWithErrorHandling('/api/bets/audit-and-correct', {
+                            method: 'POST'
+                        });
+                        console.log('Bets audited and corrected successfully');
+                        this.errorMessage = response; // This will now contain the text response from the server
+                        await this.loadBetsForSeason();
+                    } catch (error) {
+                        console.error('Error auditing and correcting bets:', error);
+                        this.errorMessage = `Error auditing and correcting bets: ${error.message}`;
                     }
                 },
 
@@ -331,6 +435,25 @@
 
                 formatDate(dateString) {
                     return new Date(dateString).toLocaleString();
+                },
+
+                async fetchWithErrorHandling(url, options = {}) {
+                    try {
+                        const response = await fetch(url, options);
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        const contentType = response.headers.get("content-type");
+                        if (contentType && contentType.includes("application/json")) {
+                            return await response.json();
+                        } else {
+                            return await response.text();
+                        }
+                    } catch (error) {
+                        console.error('Fetch error:', error);
+                        this.errorMessage = `Error: ${error.message}`;
+                        throw error;
+                    }
                 }
             };
         }
