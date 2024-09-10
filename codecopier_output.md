@@ -712,11 +712,6 @@ public class DialoddsApiApplication {
         }
         return value;
     }
-
-    private static String maskUrl(String url) {
-        if (url == null) return null;
-        return url.replaceAll("://.*?@", "://*****@");
-    }
 }
 ```
 
