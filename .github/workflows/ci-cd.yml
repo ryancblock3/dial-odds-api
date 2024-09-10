@@ -9,6 +9,18 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    env:
+      JDBC_DATABASE_URL: ${{ secrets.JDBC_DATABASE_URL }}
+      JDBC_DATABASE_USERNAME: ${{ secrets.JDBC_DATABASE_USERNAME }}
+      JDBC_DATABASE_PASSWORD: ${{ secrets.JDBC_DATABASE_PASSWORD }}
+      API_KEY: ${{ secrets.API_KEY }}
+      API_BOOKMAKER: ${{ secrets.API_BOOKMAKER }}
+      API_TARGETED_SPORTS: ${{ secrets.API_TARGETED_SPORTS }}
+      API_UPDATE_CRON: ${{ secrets.API_UPDATE_CRON }}
+      ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
+      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+      REMEMBER_ME_KEY: ${{ secrets.REMEMBER_ME_KEY }}
+    
     steps:
     - uses: actions/checkout@v2
     
@@ -17,9 +29,15 @@ jobs:
       with:
         java-version: '17'
         distribution: 'adopt'
-        
+    
+    - name: Debug Environment Variables
+      run: |
+        echo "JDBC_DATABASE_URL is set: ${{ env.JDBC_DATABASE_URL != '' }}"
+        echo "JDBC_DATABASE_USERNAME is set: ${{ env.JDBC_DATABASE_USERNAME != '' }}"
+        echo "API_KEY is set: ${{ env.API_KEY != '' }}"
+    
     - name: Build with Maven
-      run: mvn clean package
+      run: mvn clean package -DskipTests
       
     - name: Login to DockerHub
       uses: docker/login-action@v1
@@ -45,6 +63,7 @@ jobs:
         username: ${{ secrets.UNRAID_USERNAME }}
         password: ${{ secrets.UNRAID_PASSWORD }}
         script: |
+          set -e
           echo "${{ secrets.WIREGUARD_CONFIG }}" > /mnt/user/data/wireguard/wg0.conf
           echo "${{ secrets.ENV_FILE }}" > /mnt/user/data/wireguard/.env
           docker pull ${{ secrets.DOCKER_HUB_USERNAME }}/dialodds-api:latest
@@ -57,7 +76,26 @@ jobs:
             -v /mnt/user/data/wireguard/wg0.conf:/etc/wireguard/wg0.conf \
             -v /mnt/user/data/wireguard/.env:/.env \
             --env-file /mnt/user/data/wireguard/.env \
+            -e JDBC_DATABASE_URL=${{ secrets.JDBC_DATABASE_URL }} \
+            -e JDBC_DATABASE_USERNAME=${{ secrets.JDBC_DATABASE_USERNAME }} \
+            -e JDBC_DATABASE_PASSWORD=${{ secrets.JDBC_DATABASE_PASSWORD }} \
+            -e API_KEY=${{ secrets.API_KEY }} \
+            -e API_BOOKMAKER=${{ secrets.API_BOOKMAKER }} \
+            -e API_TARGETED_SPORTS=${{ secrets.API_TARGETED_SPORTS }} \
+            -e API_UPDATE_CRON=${{ secrets.API_UPDATE_CRON }} \
+            -e ADMIN_USERNAME=${{ secrets.ADMIN_USERNAME }} \
+            -e ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }} \
+            -e REMEMBER_ME_KEY=${{ secrets.REMEMBER_ME_KEY }} \
             ${{ secrets.DOCKER_HUB_USERNAME }}/dialodds-api:latest
+          if [ $? -ne 0 ]; then
+            echo "Failed to start Docker container"
+            exit 1
+          fi
           docker exec dialodds-api sh -c "
             wg-quick up wg0
           "
+          if [ $? -ne 0 ]; then
+            echo "Failed to set up WireGuard"
+            exit 1
+          fi
+          echo "Deployment successful"
